@@ -1364,7 +1364,7 @@ async function viewAnnuaire(){
     var l=ms.filter(function(m){return (m.service||'Autre')===s}).sort(function(a,b){var ra=GRADES.indexOf(a.grade),rb=GRADES.indexOf(b.grade);return (ra<0?99:ra)-(rb<0?99:rb)||a.nom.localeCompare(b.nom)});
     if(!l.length)return;
     h+='<section class="svc"><h2 style="font-size:22px;margin:22px 0 10px">'+esc(s)+'</h2><div class="dir">'+l.map(function(m){
-      return '<div class="dr" data-t="'+qa(norm(m.nom+' '+m.grade+' '+s+' '+(m.fonction||'')))+'"><span><b>'+esc(m.nom)+'</b><small>'+esc(m.grade||'')+(m.fonction?' · '+esc(m.fonction):'')+'</small></span><span class="who"><em>'+esc(m.email||'')+'</em></span>'+
+      return '<div class="dr" data-t="'+qa(norm(m.nom+' '+m.grade+' '+s+' '+(m.fonction||'')))+'"><span><b>'+esc(m.nom)+'</b><small>'+esc(m.grade||'')+(m.fonction?' · '+esc(m.fonction):'')+'</small></span><span class="who"></span>'+
       (m.id!==ME.id?'<a class="btn small" href="#messages-dm-'+qa(m.id)+'">Écrire</a>':'<span></span>')+'</div>'}).join('')+'</div></section>'});
   return h+'</div>';
 }
