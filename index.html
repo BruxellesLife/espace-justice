@@ -633,7 +633,7 @@ function canChannel(id){
   return false;
 }
 var SERVICES=['Parquet','Siège','Instruction','Barreau','Greffe','Police','Autre'];
-var GRADES=['Procureur du Roi','Substitut du Procureur','Premier Président','Juge','Juge d’instruction','Greffier','Bâtonnier','Avocat','OPJ','Agent de police','Autre','En test'];
+var GRADES=['Procureur du Roi','Substitut du Procureur','Premier Président','Juge','Juge d’instruction','Greffier','Bâtonnier','Avocat','OPJ','Agent de police','Autre'];
 var STATUTS=['Ouvert','Enquête','Instruction','Audience','Jugé','Appel','Classé'];
 var $=function(s,r){return (r||document).querySelector(s)};
 
@@ -892,7 +892,7 @@ if(!LIVE){
     var bat=u('Bâtonnier (démo)','Bâtonnier','Barreau','Chef du Barreau');
     var agt=u('Agent de police (démo)','Agent de police','Police','');
     var opj=u('OPJ (démo)','OPJ','Police','');
-    var cand=u('Candidat (démo)','En test','Autre','');
+    var cand=u('Candidat (démo)','Avocat','Barreau','');cand.en_test=true;
     var pending={id:uid(),email:'nouveau@demo.local',nom:'Nouveau membre (démo)',grade:'Avocat',service:'Barreau',fonction:'',role:'membre',approved:false,created_at:nowIso()};
     var d1={id:uid(),numero:'2026-0001',ind_nom:'Dupont',ind_prenom:'Jean',titre:'Exemple : vol à main armée (supérette)',statut:'Instruction',juridiction:'Juge d’instruction',parties:'Parquet c/ X (exemple)',resume:'Dossier d’exemple pour essayer l’espace. Les noms et faits sont fictifs.',assigne_a:ji.id,assignes:[ji.id,proc.id,opj.id],created_by:proc.id,created_at:nowIso(),updated_at:nowIso()};
     var d2={id:uid(),numero:'2026-0002',ind_nom:'Dupont',ind_prenom:'Jean',titre:'Exemple : contestation d’une amende forfaitaire',statut:'Ouvert',juridiction:'Tribunal de Police',parties:'Citoyen (exemple) c/ Police de Bruxelles',resume:'Deuxième dossier d’exemple.',assigne_a:juge.id,assignes:[juge.id,av.id],created_by:av.id,created_at:nowIso(),updated_at:nowIso()};
@@ -1024,11 +1024,11 @@ if(!LIVE){
 }
 
 /* ===================== TESTS DE RECRUTEMENT EN LIGNE =====================
-   Grade « En test » : le compte ne voit que son questionnaire.
+   Case « En test » : le compte ne voit que son questionnaire.
    Questions et corrigés : dans la base (tables tests_catalogue / tests_passages), jamais dans cette page. */
 var TTIMER=null,TSAVE=null,TTRACK=null;
-function isTestUser(m){m=m||ME;return !!m&&m.grade==='En test'&&m.role!=='admin'&&m.role!=='super'}
-function isTestM(m){return !!m&&m.grade==='En test'}
+function isTestUser(m){m=m||ME;return !!m&&m.en_test===true&&m.role!=='admin'&&m.role!=='super'}
+function isTestM(m){return !!m&&m.en_test===true}
 
 /* ---------- Données ---------- */
 var TAPI;
@@ -1120,7 +1120,7 @@ function tConsignes(e){
   '<li>Le chronomètre reste affiché en haut. À la fin du temps, vos réponses sont envoyées automatiquement. Elles sont aussi enregistrées au fur et à mesure : si la page se recharge, vous reprenez là où vous étiez, mais le chrono continue.</li>'+
   '<li>Les questions à choix et les vrai/faux sont corrigées automatiquement. Les réponses écrites (cas pratique et mise en situation) sont lues par un examinateur : quelques phrases claires suffisent, avec vos propres mots.</li>'+
   '<li>Vous verrez votre résultat (réussi ou non, votre note et le détail par partie) à votre prochaine connexion, une fois la correction terminée.</li></ul>'+
-  '<div class="tst-fair"><b>Pour que le test reste équitable</b><p>Ce test sert à voir ce que <u>vous</u> savez. Pendant l’épreuve, le temps passé sur chaque question, les sorties de la page, les copier-coller et la manière dont vos réponses écrites sont saisies sont enregistrés, et l’examinateur peut les consulter. L’usage d’une IA ou de toute aide extérieure n’est pas autorisé, et il se repère assez facilement. Ce n’est pas une menace : il n’y a rien à craindre si vous répondez seul. Un entretien oral peut d’ailleurs suivre le test, pour que vous expliquiez vos réponses.</p></div></div>';
+  '<div class="tst-fair"><b>Pour que le test reste équitable</b><p>Ce test sert à voir ce que <u>vous</u> savez. Pendant l’épreuve, le temps passé sur chaque question, les sorties de la page, les copier-coller et la manière dont vos réponses écrites sont saisies sont enregistrés, et l’examinateur peut les consulter. L’usage d’une IA ou de toute aide extérieure n’est pas autorisé, et il se repère assez facilement. Un entretien oral peut d’ailleurs suivre le test, pour que vous expliquiez vos réponses.</p></div></div>';
 }
 async function viewTest(){
   clearInterval(TTIMER);TTIMER=null;clearInterval(TSAVE);TSAVE=null;
@@ -1244,7 +1244,7 @@ async function adminTestsHtml(){
   var opt='<option value="">Choisir un test…</option>';
   var byPoste={};cat.forEach(function(c){(byPoste[c.poste]=byPoste[c.poste]||[]).push(c)});
   Object.keys(byPoste).forEach(function(k){opt+='<optgroup label="'+qa(k)+'">'+byPoste[k].map(function(c){return '<option value="'+qa(c.id)+'">'+esc(c.titre)+' · '+c.duree_min+' min</option>'}).join('')+'</optgroup>'});
-  var h='<h2 class="adm-h" id="tests">Candidats en test ('+cands.length+')</h2><p class="sub">Pour mettre quelqu’un en test : dans la liste ci-dessus, choisissez le grade « En test » et enregistrez. Il apparaît ici (et reste aussi dans la liste du haut : si vous changez son grade là-haut, il quitte cette section). Choisissez ensuite le questionnaire et envoyez-le : le candidat ne voit que ce test.</p>';
+  var h='<h2 class="adm-h" id="tests">Candidats en test ('+cands.length+')</h2><p class="sub">Pour mettre quelqu’un en test : dans la liste ci-dessus, cochez « En test » et enregistrez : il garde son grade (visible dans l’annuaire) et apparaît ici. Décochez-la pour le sortir de cette section. Choisissez ensuite le questionnaire et envoyez-le : le candidat ne voit que ce test.</p>';
   if(!cands.length)return h+'<p class="small">Aucun candidat en test pour le moment.</p>';
   h+='<div class="mlist">'+cands.map(function(m){
     var ps=pass.filter(function(p){return p.candidat===m.id}),last=ps[0];
@@ -1277,11 +1277,11 @@ function bindAdminTests(){
   })});
   document.querySelectorAll('[data-tgrade]').forEach(function(b){b.addEventListener('click',async function(){
     var id=b.getAttribute('data-tgrade'),m=MAP[id]||{};
-    var g=await dlgOpen({title:'Grade à attribuer',body:'Pour '+(m.nom||'ce candidat')+'. Il quittera la liste des candidats et aura accès à l’espace interne selon ce grade.',options:GRADES.filter(function(x){return x!=='En test'}).map(function(x){return [x,x]}),ok:'Suivant'});
+    var g=await dlgOpen({title:'Grade à attribuer',body:'Pour '+(m.nom||'ce candidat')+'. Il quittera la liste des candidats et aura accès à l’espace interne selon ce grade.',options:GRADES.map(function(x){return [x,x]}),ok:'Suivant'});
     if(!g)return;
     var sv=await dlgOpen({title:'Service',body:'Service de '+(m.nom||'ce candidat')+' (grade : '+g+').',options:SERVICES.map(function(x){return [x,x]}),ok:'Attribuer'});
     if(!sv)return;
-    try{await API.updateMember(id,{grade:g,service:sv});flash('Grade attribué : '+g+'.');route(true)}catch(e){flash(e.message,true)}
+    try{await API.updateMember(id,{grade:g,service:sv,en_test:false});flash('Grade attribué : '+g+'.');route(true)}catch(e){flash(e.message,true)}
   })});
   document.querySelectorAll('[data-tdrop]').forEach(function(b){b.addEventListener('click',async function(){
     var id=b.getAttribute('data-tdrop'),m=MAP[id]||{};
@@ -1384,9 +1384,25 @@ function bindCorrection(){
     if(!await dlgOpen({title:'Enregistrer le résultat ?',body:(MAP[C.p.candidat]||{}).nom+' : '+fnum(c.tot)+' / 40 · '+lab+'. Le candidat verra son résultat à sa prochaine connexion.',ok:'Enregistrer'}))return;
     var manuel={};document.querySelectorAll('[data-cq]').forEach(function(box){var q=box.getAttribute('data-cq'),ix=[];box.querySelectorAll('input[data-el]').forEach(function(i,k){if(i.checked)ix.push(k)});manuel[q]=ix});
     var pj=parts.map(function(pt){return {n:pt.n,titre:pt.titre,pts:c.per[pt.n]||0,max:pt.max}});
-    try{await TAPI.corriger(C.p.id,{notes:{parts:pj,manuel:manuel},total:c.tot,resultat:dec==='refuse'?'refuse':'admis',mention:dec==='mention'});try{await tMajCoches(C.p.id,C.p.candidat,dec!=='refuse',dec==='mention',C.t.titre)}catch(e2){flash('Résultat enregistré, mais la coche de l’annuaire n’a pas pu être mise à jour : '+e2.message,true)}flash('Résultat enregistré.');location.hash='admin'}
+    try{await TAPI.corriger(C.p.id,{notes:{parts:pj,manuel:manuel},total:c.tot,resultat:dec==='refuse'?'refuse':'admis',mention:dec==='mention'});try{await tMajCoches(C.p.id,C.p.candidat,dec!=='refuse',dec==='mention',C.t.titre)}catch(e2){flash('Résultat enregistré, mais la coche de l’annuaire n’a pas pu être mise à jour : '+e2.message,true)}flash('Résultat enregistré.');refreshTests();location.hash='admin'}
     catch(e){flash(e.message,true)}
   });
+}
+
+/* ---------- Notification : tests rendus à corriger ---------- */
+var TTODO=0,TSEEN=null,TPOLL=null;
+function tAcorriger(p){return p.statut==='soumis'||(p.statut==='en_cours'&&p.fin_limite&&Date.now()>Date.parse(p.fin_limite)+90000)}
+async function refreshTests(){
+  if(!ME||!isAdm())return;
+  var ps;try{ps=await TAPI.passages()}catch(e){return}
+  var todo=ps.filter(tAcorriger),ids={};todo.forEach(function(p){ids[p.id]=1});
+  if(TSEEN){todo.forEach(function(p){if(!TSEEN[p.id]){var m=MAP[p.candidat]||{};flash('Test rendu : '+(m.nom||'un candidat')+', à corriger.')}})}
+  TSEEN=ids;TTODO=todo.length;renderTestBadge();
+}
+function renderTestBadge(){
+  var a=document.querySelector('#nav a[href="#admin"]');if(!a)return;
+  var b=a.querySelector('.bdg');if(b)b.remove();
+  if(TTODO)a.insertAdjacentHTML('beforeend','<span class="bdg" title="'+TTODO+' test'+(TTODO>1?'s':'')+' à corriger">'+TTODO+'</span>');
 }
 
 /* ===================== OUTILS ===================== */
@@ -1408,7 +1424,7 @@ function isStar(d){return (d.etoile||[]).indexOf(ME.id)>=0}
 function starFirst(l){return l.map(function(d,i){return [d,i]}).sort(function(a,b){return (isStar(b[0])?1:0)-(isStar(a[0])?1:0)||a[1]-b[1]}).map(function(x){return x[0]})}
 function ficheHref(d){return '#individu-'+encodeURIComponent(indivKey(d))}
 function maskEmail(e){e=String(e||'');var i=e.lastIndexOf('@');if(i<1)return '••••••';var l=e.slice(0,i),d=e.slice(i+1),p=d.lastIndexOf('.');var dn=p>0?d.slice(0,p):d,tl=p>0?d.slice(p):'';return l.slice(0,2)+'****@'+dn.slice(0,1)+'***'+tl}
-function approved(){return MEMBERS.filter(function(m){return m.approved&&m.grade!=='En test'})}
+function approved(){return MEMBERS.filter(function(m){return m.approved&&!m.en_test})}
 var FREG=[];
 /* « Ranger dans un dossier » : seulement dans les salons Police, pour le service concerné (Parquet, Instruction, Siège) et les administrateurs */
 function RANGER_OK(f){return !!ME&&/^#messages/.test(location.hash)&&typeof CUR_CH!=='undefined'&&isDemCh(CUR_CH)&&ROLE_RANGER()}
@@ -1656,6 +1672,7 @@ async function refreshUnread(){
     if(CUR_CH&&location.hash.indexOf('#messages')===0){u[CUR_CH]=0}UNREAD=u;renderBadges()}catch(e){}
 }
 function renderBadges(){
+  if(typeof renderTestBadge==='function')renderTestBadge();
   var tot=0;for(var k in UNREAD)tot+=UNREAD[k];
   var n=document.querySelector('#nav a[href="#messages"]');if(n){var b=n.querySelector('.bdg');if(b)b.remove();if(tot){n.insertAdjacentHTML('beforeend','<span class="bdg">'+tot+'</span>')}}
   document.querySelectorAll('[data-ch]').forEach(function(a){var c=UNREAD[a.getAttribute('data-ch')]||0;var b=a.querySelector('.bdg');if(b)b.remove();if(c)a.insertAdjacentHTML('beforeend','<span class="bdg">'+c+'</span>')});
@@ -1771,7 +1788,7 @@ function bindMessages(){
 /* ===================== ANNUAIRE ===================== */
 async function viewAnnuaire(){
   await loadMembers();
-  var ms=approved();
+  var ms=MEMBERS.filter(function(m){return m.approved});
   var h='<div class="wrap page">'+pageHead('Annuaire de la Justice','Les membres de la Justice, avec leur grade et leur fonction.')+'<input class="filter" id="af" type="search" placeholder="Filtrer par nom, grade ou service" aria-label="Filtrer l’annuaire" style="max-width:520px;margin-bottom:14px">';
   SERVICES.forEach(function(s){
     var l=ms.filter(function(m){return (m.service||'Autre')===s}).sort(function(a,b){var ra=GRADES.indexOf(a.grade),rb=GRADES.indexOf(b.grade);return (ra<0?99:ra)-(rb<0?99:rb)||a.nom.localeCompare(b.nom)});
@@ -2141,7 +2158,7 @@ async function viewAdmin(){
     return '<div class="mrow'+(m.approved?'':' pend-row')+'" data-id="'+qa(m.id)+'"><div class="mtop"><input data-f="nom" class="nomin"'+dis+' value="'+qa(m.nom||'')+'" aria-label="Nom RP" required><span class="mem" title="Identifiant de connexion">'+(m.identifiant?'🔑 '+esc(m.identifiant):esc(maskEmail(m.email)))+'</span>'+(m.role==='super'?'<span class="badge-super">Super-admin</span>':'')+(m.approved?'':'<span class="badge">En attente</span>')+'</div>'+
     '<div class="mgrid"><label>Grade<select data-f="grade"'+dis+'>'+opts(GRADES,m.grade)+'</select></label><label>Service<select data-f="service"'+dis+'>'+opts(SERVICES,m.service)+'</select></label><label>Fonction<input data-f="fonction"'+dis+' value="'+qa(m.fonction||'')+'" placeholder="ex. Permanence"></label>'+
     (m.role==='super'?'':'<label>Rôle<select data-f="role"'+(isSuper()?'':' disabled title="Seul le super-administrateur change les rôles"')+'>'+opts(['membre','admin'],m.role)+'</select></label>')+
-    '<label class="mact"><input type="checkbox" data-f="public_annuaire"'+(m.public_annuaire?' checked':'')+dis+'> Afficher sur le site public</label><label class="mact"><input type="checkbox" data-f="approved"'+(m.approved?' checked':'')+((m.id===ME.id||m.role==='super')?' disabled':'')+' aria-label="Compte actif"> Compte actif</label></div>'+
+    '<label class="mact"><input type="checkbox" data-f="public_annuaire"'+(m.public_annuaire?' checked':'')+dis+'> Afficher sur le site public</label><label class="mact"><input type="checkbox" data-f="en_test"'+(m.en_test?' checked':'')+dis+' aria-label="En test"> En test</label><label class="mact"><input type="checkbox" data-f="approved"'+(m.approved?' checked':'')+((m.id===ME.id||m.role==='super')?' disabled':'')+' aria-label="Compte actif"> Compte actif</label></div>'+
     '<div class="mbtn">'+(locked?'<small>🔒 Compte protégé</small>':'<button class="btn small" data-save="'+qa(m.id)+'" type="button">Enregistrer</button>'+((isAdm()&&m.id!==ME.id&&m.role!=='super')?'<button class="btn small" data-pwr="'+qa(m.id)+'" type="button">Nouveau mot de passe</button>':'')+((isSuper()&&m.id!==ME.id)?'<button class="btn small danger" data-rmm="'+qa(m.id)+'" type="button">Supprimer</button>':''))+'</div></div>'}).join('')+'</div>'+
   (await adminTestsHtml())+(await adminExtras())+(LIVE?'':'<p class="small" style="margin-top:14px"><a href="#" id="areset">Réinitialiser la démonstration</a></p>')+'</div>';
 }
@@ -2151,7 +2168,7 @@ function bindAdmin(){
     var tr=b.closest('.mrow'),id=b.getAttribute('data-save'),f={};
     tr.querySelectorAll('[data-f]').forEach(function(x){f[x.getAttribute('data-f')]=x.type==='checkbox'?x.checked:x.value});
     if(id===ME.id)f.approved=true;
-    if(f.grade==='En test')f.approved=true;
+    if(f.en_test)f.approved=true;
     if(f.role===undefined)delete f.role;
     if('nom' in f){f.nom=f.nom.trim();if(!f.nom){flash('Le nom ne peut pas être vide.',true);return}}
     try{await API.updateMember(id,f);flash('Membre mis à jour.');route(true)}catch(e){flash(e.message,true)}
@@ -2830,13 +2847,14 @@ function navHtml(cur){
   var lo=$('#lo');if(lo)lo.addEventListener('click',logout);
   renderBadges();
 }
-async function logout(){try{await API.signOut()}catch(e){}ME=null;clearInterval(POLL);clearInterval(UTIMER);route()}
+async function logout(){try{await API.signOut()}catch(e){}ME=null;clearInterval(POLL);clearInterval(UTIMER);clearInterval(TPOLL);TSEEN=null;TTODO=0;route()}
 var UTIMER=null;
 async function start(p){
   ME=p;if(!ME){route();return}
   if(!ME.approved){route();return}
   if(isTestUser()){clearInterval(UTIMER);route();return}
   await loadMembers();refreshUnread();clearInterval(UTIMER);UTIMER=setInterval(refreshUnread,9000);
+  clearInterval(TPOLL);TSEEN=null;TTODO=0;if(isAdm()){refreshTests();TPOLL=setInterval(refreshTests,30000)}
   if(!location.hash||location.hash==='#')location.hash='accueil';else route();
 }
 function gosearch(q){LASTQ=q;if(location.hash==='#recherche')route();else location.hash='recherche'}
