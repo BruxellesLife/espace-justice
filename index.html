@@ -1244,7 +1244,7 @@ async function adminTestsHtml(){
   var opt='<option value="">Choisir un test…</option>';
   var byPoste={};cat.forEach(function(c){(byPoste[c.poste]=byPoste[c.poste]||[]).push(c)});
   Object.keys(byPoste).forEach(function(k){opt+='<optgroup label="'+qa(k)+'">'+byPoste[k].map(function(c){return '<option value="'+qa(c.id)+'">'+esc(c.titre)+' · '+c.duree_min+' min</option>'}).join('')+'</optgroup>'});
-  var h='<h2 class="adm-h" id="tests">Candidats en test ('+cands.length+')</h2><p class="sub">Pour mettre quelqu’un en test : dans la liste ci-dessus, choisissez le grade « En test » et enregistrez. Il apparaît ici. Choisissez ensuite le questionnaire et envoyez-le : le candidat ne voit que ce test.</p>';
+  var h='<h2 class="adm-h" id="tests">Candidats en test ('+cands.length+')</h2><p class="sub">Pour mettre quelqu’un en test : dans la liste ci-dessus, choisissez le grade « En test » et enregistrez. Il apparaît ici (et reste aussi dans la liste du haut : si vous changez son grade là-haut, il quitte cette section). Choisissez ensuite le questionnaire et envoyez-le : le candidat ne voit que ce test.</p>';
   if(!cands.length)return h+'<p class="small">Aucun candidat en test pour le moment.</p>';
   h+='<div class="mlist">'+cands.map(function(m){
     var ps=pass.filter(function(p){return p.candidat===m.id}),last=ps[0];
@@ -2133,7 +2133,7 @@ function bindIndividu(k){
 async function viewAdmin(){
   if(!isAdm())return '<div class="wrap page">'+pageHead('Accès refusé','Cette page est réservée aux administrateurs.')+'</div>';
   await loadMembers();
-  var ms=MEMBERS.filter(function(m){return m.grade!=='En test'||m.role==='admin'||m.role==='super'}).sort(function(a,b){return (a.approved?1:0)-(b.approved?1:0)||a.nom.localeCompare(b.nom)});
+  var ms=MEMBERS.slice().sort(function(a,b){return (a.approved?1:0)-(b.approved?1:0)||a.nom.localeCompare(b.nom)});
   var pend=ms.filter(function(m){return !m.approved}).length;
   return '<div class="wrap page">'+pageHead('Administration','Validez les nouveaux comptes et attribuez les grades. '+(isSuper()?'Vous êtes super-administrateur : vous seul changez les rôles et supprimez des comptes. ':'Les rôles et les suppressions de comptes sont réservés au super-administrateur. ')+(pend?'<b>'+pend+' compte'+(pend>1?'s':'')+' en attente.</b>':'Aucun compte en attente.'))+
   '<div class="mlist">'+ms.map(function(m){
@@ -2818,6 +2818,7 @@ function jfromDossier(j,d){j.numero=d.numero||'';j.infraction=d.titre||'';j.indi
 
 /* ===================== NAVIGATION ET DÉMARRAGE ===================== */
 function navHtml(cur){
+  if(ME&&!ME.approved){$('#nav').innerHTML='';return}
   if(ME&&isTestUser()){$('#nav').innerHTML='<button class="theme" id="lo" type="button">Déconnexion</button>';var lo0=$('#lo');if(lo0)lo0.addEventListener('click',logout);return}
   var sec=cur.split('-')[0];
   var items=[['accueil','Accueil'],['messages','Messagerie'],['dossiers','Dossiers'],['jugements','Jurisprudence'],['annuaire','Annuaire'],['codes','Codes'],['guides','Guides'],['documents','Documents']];
