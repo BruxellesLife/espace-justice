@@ -549,6 +549,11 @@ dl.pen.big{max-width:820px;margin-top:18px}
 .tbadge{display:inline-block;font-size:12px;font-weight:600;line-height:1.3;padding:2px 9px;border-radius:999px;background:#E2F4E4;color:#1e6b25;border:1px solid #bfe3c4}
 
 .tst-dlink{font-size:14px;font-weight:600;margin-left:12px;white-space:nowrap}
+
+.dsc{display:grid;gap:12px;margin:12px 0}.dsc-row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
+.dsc-t{display:flex;flex-direction:column;gap:2px}.dsc-t small{color:var(--muted)}
+.dsc-row label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}.dsc-row input[type=password],.dsc-row input[type=text],.dsc-row input:not([type]){width:100%}
+.dsc-row label.mact{flex-direction:row;align-items:center;gap:8px}
 </style>
 </head><body>
 <a class="skip" href="#main">Aller au contenu</a>
@@ -1462,6 +1467,47 @@ async function viewTestStats(tid){
   return h2+'</tbody></table></div></div>';
 }
 
+/* ===================== NOTIFICATIONS DISCORD (administration) =====================
+   Les adresses des webhooks sont dans la table discord_hooks (lisible des seuls administrateurs). */
+var DISC_DEF=[['pol_parquet','Message de la Police au Parquet','Bureau du Procureur › contact-police'],['pol_siege','Message de la Police aux juges et à l’instruction','Bureau du juge › contact-police'],['plainte','Nouvelle plainte','Bureau du Procureur › dossier'],['dossier','Nouveau dossier, ou dossier confié à un avocat','Bureau des avocats › dossier-client']];
+async function adminDiscordHtml(){
+  if(!isAdm())return '';
+  var h='<h2 class="adm-h" id="discord">Notifications Discord</h2>';
+  if(!LIVE)return h+'<p class="sub">Disponible quand la base de données est reliée (mode démonstration : rien n’est envoyé).</p>';
+  var rows;try{rows=chk(await SB.from('discord_hooks').select('*'))}catch(e){return h+'<p class="sub">Notifications non installées : relancez setup.sql dans Supabase (voir LISEZMOI).</p>'}
+  var by={};rows.forEach(function(r){by[r.event]=r});
+  h+='<p class="sub">Pour chaque ligne : collez l’adresse du webhook du salon Discord, puis l’identifiant du rôle à mentionner (facultatif). Cochez « Actif », enregistrez, puis testez. Les adresses restent secrètes : elles ne sont jamais dans la page.</p><div class="dsc">';
+  DISC_DEF.forEach(function(d){
+    var r=by[d[0]]||{url:'',role_id:'',actif:true};
+    h+='<div class="dsc-row" data-ev="'+qa(d[0])+'"><div class="dsc-t"><b>'+esc(d[1])+'</b><small>'+esc(d[2])+'</small></div>'+
+    '<label>Adresse du webhook<input type="password" data-f="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/…" value="'+qa(r.url||'')+'"></label>'+
+    '<label>Rôle à mentionner (identifiant)<input data-f="role_id" inputmode="numeric" autocomplete="off" placeholder="ex. 123456789012345678" value="'+qa(r.role_id||'')+'"></label>'+
+    '<label class="mact"><input type="checkbox" data-f="actif"'+(r.actif!==false?' checked':'')+'> Actif</label>'+
+    '<div class="mbtn"><button class="btn small" type="button" data-dsave="'+qa(d[0])+'">Enregistrer</button><button class="btn small" type="button" data-dtest="'+qa(d[0])+'">Tester</button><button class="btn small" type="button" data-dshow="'+qa(d[0])+'">Afficher</button></div></div>';
+  });
+  return h+'</div>';
+}
+function bindAdminDiscord(){
+  function row(ev){return document.querySelector('.dsc-row[data-ev="'+ev+'"]')}
+  function vals(ev){var r=row(ev);return {url:r.querySelector('[data-f=url]').value.trim(),role_id:r.querySelector('[data-f=role_id]').value.trim(),actif:r.querySelector('[data-f=actif]').checked}}
+  function verifier(v){
+    if(v.url&&!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(v.url))return 'Cette adresse n’est pas celle d’un webhook Discord (elle commence par https://discord.com/api/webhooks/).';
+    if(v.role_id&&!/^\d{5,25}$/.test(v.role_id))return 'L’identifiant du rôle ne contient que des chiffres (clic droit sur le rôle > Copier l’identifiant, mode développeur activé).';
+    return '';
+  }
+  document.querySelectorAll('[data-dsave]').forEach(function(b){b.addEventListener('click',async function(){
+    var ev=b.getAttribute('data-dsave'),v=vals(ev),er=verifier(v);if(er){flash(er,true);return}
+    try{chk(await SB.from('discord_hooks').update(v).eq('event',ev));flash('Enregistré.')}catch(e){flash(e.message,true)}
+  })});
+  document.querySelectorAll('[data-dtest]').forEach(function(b){b.addEventListener('click',async function(){
+    var ev=b.getAttribute('data-dtest'),v=vals(ev),er=verifier(v);if(er){flash(er,true);return}
+    try{chk(await SB.from('discord_hooks').update(v).eq('event',ev));var r=await SB.rpc('discord_test',{ev:ev});if(r.error)throw new Error(r.error.message);flash('Message de test envoyé : regardez le salon Discord dans quelques secondes.')}catch(e){flash(e.message,true)}
+  })});
+  document.querySelectorAll('[data-dshow]').forEach(function(b){b.addEventListener('click',function(){
+    var i=row(b.getAttribute('data-dshow')).querySelector('[data-f=url]');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Afficher':'Masquer';
+  })});
+}
+
 /* ===================== OUTILS ===================== */
 function qa(s){return esc(String(s==null?'':s)).replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function fdate(iso){try{return new Date(iso).toLocaleString('fr-BE',{dateStyle:'short',timeStyle:'short'})}catch(e){return iso}}
@@ -2217,10 +2263,10 @@ async function viewAdmin(){
     (m.role==='super'?'':'<label>Rôle<select data-f="role"'+(isSuper()?'':' disabled title="Seul le super-administrateur change les rôles"')+'>'+opts(['membre','admin'],m.role)+'</select></label>')+
     '<label class="mact"><input type="checkbox" data-f="public_annuaire"'+(m.public_annuaire?' checked':'')+dis+'> Afficher sur le site public</label><label class="mact"><input type="checkbox" data-f="en_test"'+(m.en_test?' checked':'')+dis+' aria-label="En test"> En test</label><label class="mact"><input type="checkbox" data-f="approved"'+(m.approved?' checked':'')+((m.id===ME.id||m.role==='super')?' disabled':'')+' aria-label="Compte actif"> Compte actif</label></div>'+
     '<div class="mbtn">'+(locked?'<small>🔒 Compte protégé</small>':'<button class="btn small" data-save="'+qa(m.id)+'" type="button">Enregistrer</button>'+((isAdm()&&m.id!==ME.id&&m.role!=='super')?'<button class="btn small" data-pwr="'+qa(m.id)+'" type="button">Nouveau mot de passe</button>':'')+((isSuper()&&m.id!==ME.id)?'<button class="btn small danger" data-rmm="'+qa(m.id)+'" type="button">Supprimer</button>':''))+'</div></div>'}).join('')+'</div>'+
-  (await adminTestsHtml())+(await adminExtras())+(LIVE?'':'<p class="small" style="margin-top:14px"><a href="#" id="areset">Réinitialiser la démonstration</a></p>')+'</div>';
+  (await adminTestsHtml())+(await adminDiscordHtml())+(await adminExtras())+(LIVE?'':'<p class="small" style="margin-top:14px"><a href="#" id="areset">Réinitialiser la démonstration</a></p>')+'</div>';
 }
 function bindAdmin(){
-  bindAdminExtras();bindAdminTests();
+  bindAdminExtras();bindAdminTests();bindAdminDiscord();
   document.querySelectorAll('[data-save]').forEach(function(b){b.addEventListener('click',async function(){
     var tr=b.closest('.mrow'),id=b.getAttribute('data-save'),f={};
     tr.querySelectorAll('[data-f]').forEach(function(x){f[x.getAttribute('data-f')]=x.type==='checkbox'?x.checked:x.value});
