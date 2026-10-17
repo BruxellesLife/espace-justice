@@ -1469,7 +1469,7 @@ async function viewTestStats(tid){
 
 /* ===================== NOTIFICATIONS DISCORD (administration) =====================
    Les adresses des webhooks sont dans la table discord_hooks (lisible des seuls administrateurs). */
-var DISC_DEF=[['pol_parquet','Message de la Police au Parquet','Bureau du Procureur › contact-police'],['pol_siege','Message de la Police aux juges et à l’instruction','Bureau du juge › contact-police'],['plainte','Nouvelle plainte','Bureau du Procureur › dossier'],['dossier','Nouveau dossier, ou dossier confié à un avocat','Bureau des avocats › dossier-client']];
+var DISC_DEF=[['pol_parquet','Message de la Police au Parquet','Bureau du Procureur › contact-police'],['pol_siege','Message de la Police aux juges','Bureau du juge › contact-police'],['pol_instruction','Message de la Police au juge d’instruction','Bureau du juge d’instruction'],['transm_instruction','Dossier transmis au juge d’instruction (changement de juridiction ou de statut)','Laisser vide pour utiliser le salon « Police au juge d’instruction »'],['transm_jugement','Dossier transmis pour jugement (tribunal, assises, appel, statut Audience)','Laisser vide pour utiliser le salon « Police aux juges »'],['plainte','Nouvelle plainte','Bureau du Procureur › dossier'],['dossier','Nouveau dossier, ou dossier confié à un avocat','Bureau des avocats › dossier-client']];
 async function adminDiscordHtml(){
   if(!isAdm())return '';
   var h='<h2 class="adm-h" id="discord">Notifications Discord</h2>';
