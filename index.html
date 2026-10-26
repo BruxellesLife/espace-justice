@@ -2076,10 +2076,11 @@ async function viewDossier(id){
   var ups=(EX.ech||[]).filter(function(e){return !e.done}).sort(function(a,b){return a.date_heure<b.date_heure?-1:1});
   var icLog=function(t){return /^(État|Dossier (classé|rouvert))/.test(t)?'🔄':/chéance/i.test(t)?'📅':/^Pièce/.test(t)?'📎':/^(Personne|Intervenant|Modification : chargés)/.test(t)?'👤':/lié|lien/i.test(t)?'🔗':/export/i.test(t)?'📤':'✏️'};
   var ev=[];
-  notes.forEach(function(n){if(n.body||(n.files&&n.files.length))ev.push({at:n.created_at,by:n.author,ic:'📝',h:'<div class="mb">'+linkify(esc(n.body||'').replace(/\n/g,'<br>'),null)+'</div>'+((!n.body&&n.files&&n.files.length)?'<div class="mb"><small>📎 '+n.files.map(function(f){return esc(f.name)}).join(', ')+' (voir « Pièces » ci-dessus)</small></div>':'')})});
+  notes.forEach(function(n){if(n.body||(n.files&&n.files.length))ev.push({at:n.created_at,by:n.author,ic:'📝',h:'<div class="mb">'+linkify(esc(n.body||'').replace(/\n/g,'<br>'),null)+'</div>'+((n.body&&!isROD()&&!d.deleted_at)?'<div class="mb"><button class="btn ghost small" type="button" data-toinfo="'+qa(n.id)+'">⬆ Mettre en informations du dossier</button></div>':'')+((!n.body&&n.files&&n.files.length)?'<div class="mb"><small>📎 '+n.files.map(function(f){return esc(f.name)}).join(', ')+' (voir « Pièces » ci-dessus)</small></div>':'')})});
   hist.forEach(function(l){if(/^Note ajoutée/.test(l.action))return;ev.push({at:l.created_at,by:l.author,ic:icLog(l.action),h:'<div class="mb">'+esc(l.action)+'</div>'})});
   ev.sort(function(x,y){return x.at<y.at?1:-1});
-  var tl='<section class="block" style="padding-top:8px"><h2 style="font-size:34px;margin-bottom:14px">Informations du dossier</h2>'+
+  var inf='<section class="block" style="padding-top:8px"><h2 style="font-size:34px;margin-bottom:10px">Informations du dossier</h2>'+(isROD()?'<div class="res-txt">'+(d.infos?esc(d.infos).replace(/\n/g,'<br>'):'<span class="sub">Aucune information.</span>')+'</div>':'<textarea id="infos" rows="9" placeholder="Informations générales du dossier : synthèse, points clés, suites à donner… (toujours affiché ici)" aria-label="Informations du dossier" style="width:100%;font:inherit;padding:10px">'+esc(d.infos||'')+'</textarea><div class="comprow" style="margin-top:8px"><button class="btn" type="button" id="infosave">Enregistrer les informations</button><small class="sub" id="infosat">'+(d.infos_at?'Dernière modification le '+fdate(d.infos_at):'')+'</small></div>')+'</section>';
+  var tl=inf+'<section class="block" style="padding-top:8px"><h2 style="font-size:26px;margin-bottom:14px">Notes et chronologie</h2>'+
     '<form id="nf" class="comp" style="margin-bottom:14px"><div id="npend" class="pend"></div><textarea id="nt" rows="3" placeholder="Ajouter une note, un acte, une décision…" aria-label="Nouvelle note"></textarea><div class="comprow"><label class="btn ghost small">📎 Joindre un fichier<input id="nfile" type="file" multiple hidden></label><button class="btn" type="submit">Enregistrer</button><button class="btn ghost" type="button" id="nsgo">Enregistrer et revenir aux dossiers</button></div></form>'+
     '<h3 class="tlh">Chronologie</h3><div class="htl" id="htl"><ol class="htl-r">'+
     ev.slice().reverse().map(function(x){return '<li><span class="ti">'+x.ic+'</span><div class="hc"><time>'+fdate(x.at)+' · '+esc(who(x.by))+'</time>'+x.h+'</div></li>'}).join('')+
@@ -2183,6 +2184,8 @@ function bindDossier(id){
   })});
   var ed=$('#ded');if(ed)ed.addEventListener('click',function(){EDITING=true;route(true)});
   var dl=$('#ddel');if(dl)dl.addEventListener('click',async function(){if(await ask('Mettre ce dossier à la corbeille ?\n\nIl disparaît des listes mais un administrateur peut le restaurer pendant 30 jours.')){try{await API.upd('dossiers',id,{deleted_at:new Date().toISOString(),deleted_by:ME.id});await API.log(id,'Dossier mis à la corbeille');flash('Dossier mis à la corbeille.');location.hash='dossiers'}catch(e){flash(e.message,true)}}});
+  var isv=$('#infosave');if(isv)isv.addEventListener('click',async function(){try{var t=$('#infos').value;await API.upd('dossiers',id,{infos:t,infos_at:new Date().toISOString()});await API.log(id,'Informations du dossier mises à jour');flash('Informations enregistrées.');route(true)}catch(e){flash(/infos/i.test(e.message||'')?'Colonne manquante : lancez d’abord le fichier infos_dossier.sql dans Supabase.':e.message,true)}});
+  document.querySelectorAll('[data-toinfo]').forEach(function(bt){bt.addEventListener('click',async function(){try{var ns=await API.notes(id);var n=ns.filter(function(x){return x.id===bt.getAttribute('data-toinfo')})[0];if(!n)return;var dd=await API.dossier(id);var cur=(dd.infos||'').trim();if(!(await ask('Mettre ce texte dans les « Informations du dossier » ?'+(cur?'\n\nIl sera ajouté à la fin du texte actuel.':'')+'\n\nLa note d’origine reste dans la chronologie.')))return;await API.upd('dossiers',id,{infos:(cur?cur+'\n\n':'')+n.body,infos_at:new Date().toISOString()});await API.log(id,'Une note a été placée dans les informations du dossier');flash('Texte placé dans les informations.');route(true)}catch(e){flash(/infos/i.test(e.message||'')?'Colonne manquante : lancez d’abord le fichier infos_dossier.sql dans Supabase.':e.message,true)}})});
   NPEND=[];var np=$('#npend');
   var draw=function(){np.innerHTML=NPEND.map(function(p,i){return '<span class="fchip">📎 '+esc(p.name)+' <button type="button" data-rm="'+i+'">×</button></span>'}).join('');np.querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){NPEND.splice(+b.getAttribute('data-rm'),1);draw()})})};
   $('#nfile').addEventListener('change',async function(e){var fs=Array.prototype.slice.call(e.target.files);e.target.value='';for(var i=0;i<fs.length;i++){try{NPEND.push(await API.upload(fs[i]));draw()}catch(err){flash(err.message,true)}}});
@@ -2201,7 +2204,7 @@ async function buildExport(d,notes,hist){
   (d.statut==='Classé'?'<div class="cl">DOSSIER CLASSÉ'+(d.classe_at?' le '+fdate(d.classe_at):'')+(d.motif_classement?' — motif : '+e(d.motif_classement):'')+'</div>':'')+
   '<h2>Renseignements</h2><table><tr><td>Individu</td><td>'+e(indiv(d)||'—')+'</td></tr><tr><td>État</td><td>'+e(d.statut)+'</td></tr><tr><td>Juridiction</td><td>'+e(d.juridiction||'—')+'</td></tr><tr><td>En charge du dossier</td><td>'+e(resp(d)?whoLong(resp(d)):'—')+'</td></tr><tr><td>Intervenants</td><td>'+e(asg(d).filter(function(x){return x!==resp(d)}).map(whoLong).join(' ; ')||'—')+'</td></tr><tr><td>Parties</td><td>'+e(d.parties||'—')+'</td></tr>'+(lie.length?'<tr><td>Dossiers liés</td><td>'+lie.map(function(x){return e(x.numero+' ('+x.titre+')')}).join(' ; ')+'</td></tr>':'')+'<tr><td>Ouvert par</td><td>'+e(d.created_by?whoLong(d.created_by):(/^PL-/.test(d.numero||'')?'Plainte en ligne':'Ancien membre'))+' le '+fdate(d.created_at)+'</td></tr></table>'+
   '<h2>Résumé des faits</h2><p>'+nl(d.resume||'Aucun résumé.')+'</p>'+
-  '<h2>Notes et décisions ('+notes.length+')</h2>'+(notes.map(function(n){return '<div class="n"><small>'+e(whoLong(n.author))+' — '+fdate(n.created_at)+'</small><br>'+nl(n.body)+'</div>'}).join('')||'<p>Aucune note.</p>')+
+  (d.infos?'<h2>Informations du dossier</h2><p>'+nl(d.infos)+'</p>':'')+'<h2>Notes et décisions ('+notes.length+')</h2>'+(notes.map(function(n){return '<div class="n"><small>'+e(whoLong(n.author))+' — '+fdate(n.created_at)+'</small><br>'+nl(n.body)+'</div>'}).join('')||'<p>Aucune note.</p>')+
   '<h2>Pièces jointes ('+np+')</h2>'+(np?'<ul>'+piecesHtml+'</ul><p><i>Les fichiers eux-mêmes se téléchargent depuis le dossier et se transmettent séparément.</i></p>':'<p>Aucune pièce.</p>')+
   '<h2>Journal des modifications</h2><ul>'+hist.slice().reverse().map(function(l){return '<li>'+fdate(l.created_at)+' — '+e(who(l.author))+' : '+e(l.action)+'</li>'}).join('')+'</ul>'+
   printSign()+'<div class="ft">Exporté le '+fdate(new Date().toISOString())+' par '+e(whoLong(ME.id))+'. Univers de jeu de rôle fictif.</div></body></html>';
@@ -2305,7 +2308,7 @@ async function viewAdmin(){
     (m.role==='super'?'':'<label>Rôle<select data-f="role"'+(isSuper()?'':' disabled title="Seul le super-administrateur change les rôles"')+'>'+opts(['membre','admin'],m.role)+'</select></label>')+
     '<label class="mact"><input type="checkbox" data-f="public_annuaire"'+(m.public_annuaire?' checked':'')+dis+'> Afficher sur le site public</label><label class="mact"><input type="checkbox" data-f="en_test"'+(m.en_test?' checked':'')+dis+' aria-label="En test"> En test</label><label class="mact"><input type="checkbox" data-f="approved"'+(m.approved?' checked':'')+((m.id===ME.id||m.role==='super')?' disabled':'')+' aria-label="Compte actif"> Compte actif</label></div>'+
     '<div class="mbtn">'+(locked?'<small>🔒 Compte protégé</small>':'<button class="btn small" data-save="'+qa(m.id)+'" type="button">Enregistrer</button>'+((isAdm()&&m.id!==ME.id&&m.role!=='super')?'<button class="btn small" data-pwr="'+qa(m.id)+'" type="button">Nouveau mot de passe</button>':'')+((isSuper()&&m.id!==ME.id)?'<button class="btn small danger" data-rmm="'+qa(m.id)+'" type="button">Supprimer</button>':''))+'</div></div>'}).join('')+'</div>'+
-  (await adminTestsHtml())+(await adminDiscordHtml())+(await adminExtras())+(LIVE?'':'<p class="small" style="margin-top:14px"><a href="#" id="areset">Réinitialiser la démonstration</a></p>')+'</div>';
+  (await adminTestsHtml())+(await adminExtras())+(LIVE?'':'<p class="small" style="margin-top:14px"><a href="#" id="areset">Réinitialiser la démonstration</a></p>')+'</div>';
 }
 function bindAdmin(){
   bindAdminExtras();bindAdminTests();bindAdminDiscord();
@@ -2945,23 +2948,22 @@ function discDialog(o){
 }
 async function discSection(d){
   await loadDiscs();
-  var mine=DISCS.filter(function(x){return x.dossier_id===d.id});
+  var x=DISCS.filter(function(y){return y.dossier_id===d.id})[0];
+  if(x)return '<div class="inl" style="margin:10px 0 4px"><a class="btn ghost small" href="#messages-disc-'+qa(x.id)+'">💬 Ouvrir la discussion</a></div>';
   var can=canCreateDisc()&&canSeeD(d)&&d.statut!=='Classé'&&!d.deleted_at;
-  return '<section class="block" style="padding-top:8px"><h2 style="font-size:22px">Discussions du dossier ('+mine.length+')</h2><p class="sub">Un groupe de discussion à part, pour échanger avec des personnes qui n’ont pas accès au dossier (Police, avocat…). Seuls les membres que vous ajoutez y ont accès. Elles sont archivées avec le dossier.</p>'+
-    (mine.length?'<div class="mf" style="margin-top:8px">'+mine.map(function(x){return '<span class="pc"><a class="fchip" href="#messages-disc-'+qa(x.id)+'">'+(x.archived_at?'🗄':'💬')+' '+esc(x.titre||'Discussion')+' · '+(x.membres||[]).length+' membres'+(x.archived_at?' (archivée)':'')+'</a></span>'}).join('')+'</div>':'')+
-    (can?'<div class="inl" style="margin-top:8px"><button class="btn small" id="dnew" type="button">➕ Ouvrir une discussion</button></div>':'')+'</section>';
+  return can?'<div class="inl" style="margin:10px 0 4px"><button class="btn ghost small" id="dnew" type="button">💬 Ouvrir une discussion</button></div>':'';
 }
 function bindDisc(id){
   var b=$('#dnew');if(!b)return;
   b.addEventListener('click',async function(){
     try{
+      b.disabled=true;
       var d=await API.dossier(id);if(!d)return;
-      var r=await discDialog({title:'Ouvrir une discussion',body:'Choisissez les personnes qui pourront y participer. Vous seul pourrez ensuite en ajouter ou en retirer.',titre:d.numero+' · '+d.titre,ok:'Ouvrir la discussion'});
-      if(!r)return;
-      var row=await API.ins('discussions',{dossier_id:id,titre:r.titre,created_by:ME.id,membres:[ME.id].concat(r.membres)});
-      await API.log(id,'Discussion ouverte : « '+r.titre+' » ('+(r.membres.length+1)+' membres)');
-      flash('Discussion ouverte.');location.hash='messages-disc-'+row.id;
-    }catch(e){flash(e.message,true)}
+      var t=d.numero+' · '+d.titre;
+      var row=await API.ins('discussions',{dossier_id:id,titre:t,created_by:ME.id,membres:[ME.id]});
+      await API.log(id,'Discussion ouverte : « '+t+' »');
+      flash('Discussion ouverte. Ajoutez-y des membres avec le bouton « Membres ».');location.hash='messages-disc-'+row.id;
+    }catch(e){b.disabled=false;flash(e.message,true)}
   });
 }
 function bindDiscHead(){
